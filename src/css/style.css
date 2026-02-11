@@ -261,3 +261,33 @@ footer {
   font-size: var(--small-font);
   padding: 1em;
 }
+.categories {
+  margin: 2rem 0;
+  text-align: center;
+}
+
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 2rem;
+  margin-top: 1.5rem;
+}
+
+.category-card {
+  text-decoration: none;
+  color: inherit;
+  padding: 1.5rem;
+  border-radius: 10px;
+  background: #f8f8f8;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.category-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.category-card img {
+  width: 90px;
+  margin-bottom: 1rem;
+}

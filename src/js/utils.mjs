@@ -7,6 +7,19 @@ export function renderWithTemplate(template, parentElement, data, callback) {
   }
 }
 
+export function renderListWithTemplate(templateFn, parentElement, data, callback) {
+  parentElement.innerHTML = "";
+
+  data.forEach(item => {
+    parentElement.insertAdjacentHTML("beforeend", templateFn(item));
+  });
+
+  if (callback) {
+    callback(data);
+  }
+}
+
+
 // Load html template file
 export async function loadTemplate(path) {
   const response = await fetch(path);
@@ -37,4 +50,8 @@ export function getLocalStorage(key) {
 // Set data to localStorage
 export function setLocalStorage(key, data) {
   localStorage.setItem(key, JSON.stringify(data));
+}
+export function getParam(param) {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get(param);
 }
