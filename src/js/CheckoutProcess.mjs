@@ -1,4 +1,4 @@
-import { getLocalStorage } from "./utils.mjs";
+import { getLocalStorage, alertMessage } from "./utils.mjs";
 import ExternalServices from "./ExternalServices.mjs";
 
 export default class CheckoutProcess {
@@ -10,6 +10,7 @@ export default class CheckoutProcess {
     this.shipping = 0;
     this.tax = 0;
     this.orderTotal = 0;
+    this.services = new ExternalServices();
   }
 
   // Called when the page loads
@@ -18,7 +19,7 @@ export default class CheckoutProcess {
     this.calculateItemSubTotal();
   }
 
-  // Calculate cart subtotal
+  // Calculate subtotal from cart items
   calculateItemSubTotal() {
     this.itemTotal = this.list.reduce(
       (sum, item) => sum + item.FinalPrice * item.qty,
@@ -28,26 +29,30 @@ export default class CheckoutProcess {
     const subtotalEl = document.querySelector(
       `${this.outputSelector} #subtotal`
     );
+
     if (subtotalEl) {
       subtotalEl.textContent = `$${this.itemTotal.toFixed(2)}`;
     }
   }
 
-  // Calculate tax, shipping, and total
+  // Calculate tax, shipping and total
   calculateOrderTotal() {
+    // Tax = 6%
+    this.tax = this.itemTotal * 0.06;
+
+    // Shipping: $10 first item + $2 each extra item
     const itemCount = this.list.reduce(
       (sum, item) => sum + item.qty,
       0
     );
-
-    this.tax = this.itemTotal * 0.06;
     this.shipping = itemCount > 0 ? 10 + (itemCount - 1) * 2 : 0;
+
     this.orderTotal = this.itemTotal + this.tax + this.shipping;
 
     this.displayOrderTotals();
   }
 
-  // Display totals in the order summary
+  // Display totals in the summary box
   displayOrderTotals() {
     document.querySelector(
       `${this.outputSelector} #tax`
@@ -62,7 +67,7 @@ export default class CheckoutProcess {
     ).textContent = `$${this.orderTotal.toFixed(2)}`;
   }
 
-  // Prepare cart items for checkout
+  // Convert cart items to server format
   packageItems(items) {
     return items.map(item => ({
       id: item.Id,
@@ -72,22 +77,36 @@ export default class CheckoutProcess {
     }));
   }
 
-  // Submit order to the server
+  // Called when form is submitted
   async checkout(form) {
-    const formData = new FormData(form);
-    const order = {};
+    try {
+      // Get form data
+      const formData = new FormData(form);
+      const order = Object.fromEntries(formData.entries());
 
-    formData.forEach((value, key) => {
-      order[key] = value;
-    });
+      // Add required server fields
+      order.orderDate = new Date().toISOString();
+      order.items = this.packageItems(this.list);
+      order.orderTotal = this.orderTotal;
+      order.shipping = this.shipping;
+      order.tax = this.tax.toFixed(2);
 
-    order.orderDate = new Date().toISOString();
-    order.items = this.packageItems(this.list);
-    order.orderTotal = this.orderTotal.toFixed(2);
-    order.tax = this.tax.toFixed(2);
-    order.shipping = this.shipping;
+      // Send order to server
+      await this.services.checkout(order);
 
-    const service = new ExternalServices();
-    return await service.checkout(order);
+      // Success: clear cart and go to success page
+      localStorage.removeItem("so-cart");
+      window.location.href = "/checkout/success.html";
+
+    } catch (err) {
+      // Handle server validation errors
+      if (err.name === "servicesError") {
+        Object.values(err.message).forEach(msg => {
+          alertMessage(msg);
+        });
+      } else {
+        alertMessage("Checkout failed. Please try again.");
+      }
+    }
   }
 }
